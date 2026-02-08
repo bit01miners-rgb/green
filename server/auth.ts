@@ -18,10 +18,24 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
 export function setupAuth(app: Express) {
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
-      const { email, password, firstName, lastName, username } = req.body;
+      const { email, password, firstName, lastName, username, name } = req.body;
 
-      if (!email || !password || !firstName || !lastName) {
-        return res.status(400).json({ error: "Missing required fields" });
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
+      // Handle both name formats
+      let fName = firstName;
+      let lName = lastName;
+
+      if (!fName && !lName && name) {
+        const nameParts = name.trim().split(" ");
+        fName = nameParts[0];
+        lName = nameParts.slice(1).join(" ") || nameParts[0];
+      }
+
+      if (!fName || !lName) {
+        return res.status(400).json({ error: "Name is required" });
       }
 
       const existing = await storage.getUserByEmail(email);
@@ -34,8 +48,8 @@ export function setupAuth(app: Express) {
       const user = await storage.createUser({
         email,
         password: hashedPassword,
-        firstName,
-        lastName,
+        firstName: fName,
+        lastName: lName,
         username: username || email.split("@")[0],
       });
 
