@@ -8,6 +8,7 @@
     "build": "vite build && esbuild server/index.ts --bundle --platform=node --outdir=dist --format=esm --packages=external",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
+    "test": "npm run check && npm run build",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio"

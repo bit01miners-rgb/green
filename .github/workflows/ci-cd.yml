@@ -1,0 +1,104 @@
+name: CI/CD Pipeline
+
+env:
+  VERCEL_ORG_ID: team_Nhqf24Rxawm7ye0JjXaY155J
+  VERCEL_PROJECT_ID: prj_ZlIK3rdJqsT8PwMXvWtu6vMxqYSb
+  VERCEL_TOKEN: tA0H86qwCY7Z7DPLit27SRoH
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run Tests & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: TypeScript Type Check
+        run: npm run check
+
+      - name: Build Application
+        run: npm run build
+
+  deploy-preview:
+    name: Deploy Preview
+    needs: test
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=preview --token=${{ env.VERCEL_TOKEN }}
+
+      - name: Build Project
+        run: vercel build --token=${{ env.VERCEL_TOKEN }}
+
+      - name: Deploy to Preview
+        run: vercel deploy --prebuilt --token=${{ env.VERCEL_TOKEN }}
+
+  deploy-production:
+    name: Deploy to Production
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=production --token=${{ env.VERCEL_TOKEN }}
+
+      - name: Build Project
+        run: vercel build --prod --token=${{ env.VERCEL_TOKEN }}
+
+      - name: Deploy to Production
+        id: deploy
+        run: |
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ env.VERCEL_TOKEN }})
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $DEPLOYMENT_URL"
+
+      - name: Run Smoke Tests
+        run: |
+          echo "Running smoke tests on deployment..."
+          sleep 10
+          curl -f ${{ steps.deploy.outputs.url }} || exit 1
+          curl -f ${{ steps.deploy.outputs.url }}/api/health || echo "Health check endpoint not found"
+          echo "✅ Deployment successful and accessible!"
+
+  notify:
+    name: Notify Status
+    needs: [test, deploy-production]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Status
+        run: |
+          if [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.deploy-production.result }}" == "success" ]; then
+            echo "✅ All checks passed! Application deployed successfully."
+          else
+            echo "❌ Pipeline failed. Check logs above."
+            exit 1
+          fi
