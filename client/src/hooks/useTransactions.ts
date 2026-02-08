@@ -40,8 +40,16 @@ export function useCreateTransaction() {
   });
 }
 
+export interface FinanceSummary {
+  totalIncome: string;
+  totalExpenses: string;
+  savingsRate: string;
+  netWorth?: number;
+  topCategories: { category: string; amount: string }[];
+}
+
 export function useFinanceSummary() {
-  return useQuery({
+  return useQuery<FinanceSummary>({
     queryKey: ["/api/finance/summary"],
   });
 }

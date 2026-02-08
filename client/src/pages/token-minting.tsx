@@ -57,18 +57,15 @@ export default function TokenMinting() {
         },
         onSuccess: (data) => {
             setMintedToken(data);
-            toast({
-                title: "Token Minted Successfully",
+            toast.success("Token Minted Successfully", {
                 description: `Deployed ${data.token.symbol} on ${data.token.chain}`,
             });
             // Invalidate portfolio query to show new token
             queryClient.invalidateQueries({ queryKey: ["/api/trading/portfolio"] });
         },
         onError: (error) => {
-            toast({
-                title: "Minting Failed",
+            toast.error("Minting Failed", {
                 description: error.message,
-                variant: "destructive",
             });
         },
     });

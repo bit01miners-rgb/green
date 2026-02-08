@@ -96,21 +96,21 @@ export default function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Net Worth"
-          value={formatCurrency(summary?.netWorth ?? 124500)}
+          value={formatCurrency(Number(summary?.netWorth ?? 124500))}
           change={4.2}
           icon={DollarSign}
           color="bg-green-600"
         />
         <StatCard
           label="Monthly Income"
-          value={formatCurrency(summary?.totalIncome ?? 9200)}
+          value={formatCurrency(Number(summary?.totalIncome ?? 9200))}
           change={8.1}
           icon={TrendingUp}
           color="bg-blue-600"
         />
         <StatCard
           label="Monthly Expenses"
-          value={formatCurrency(summary?.totalExpenses ?? 4700)}
+          value={formatCurrency(Number(summary?.totalExpenses ?? 4700))}
           change={-3.5}
           icon={TrendingDown}
           color="bg-red-500"
@@ -230,19 +230,18 @@ export default function Dashboard() {
             {(transactions && transactions.length > 0
               ? transactions
               : [
-                  { id: 1, description: "Grocery Store", category: "food", amount: -82.5, type: "expense", date: new Date().toISOString() },
-                  { id: 2, description: "Salary Deposit", category: "income", amount: 4600, type: "income", date: new Date().toISOString() },
-                  { id: 3, description: "Netflix", category: "entertainment", amount: -15.99, type: "expense", date: new Date().toISOString() },
-                  { id: 4, description: "Electric Bill", category: "bills", amount: -120, type: "expense", date: new Date().toISOString() },
-                  { id: 5, description: "Freelance Payment", category: "income", amount: 1200, type: "income", date: new Date().toISOString() },
-                ]
+                { id: 1, description: "Grocery Store", category: "food", amount: -82.5, type: "expense", date: new Date().toISOString() },
+                { id: 2, description: "Salary Deposit", category: "income", amount: 4600, type: "income", date: new Date().toISOString() },
+                { id: 3, description: "Netflix", category: "entertainment", amount: -15.99, type: "expense", date: new Date().toISOString() },
+                { id: 4, description: "Electric Bill", category: "bills", amount: -120, type: "expense", date: new Date().toISOString() },
+                { id: 5, description: "Freelance Payment", category: "income", amount: 1200, type: "income", date: new Date().toISOString() },
+              ]
             ).map((txn: any) => (
               <div key={txn.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg ${
-                      txn.type === "income" ? "bg-green-500/10" : "bg-red-500/10"
-                    }`}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg ${txn.type === "income" ? "bg-green-500/10" : "bg-red-500/10"
+                      }`}
                   >
                     {txn.type === "income" ? (
                       <ArrowUpRight className="h-4 w-4 text-green-500" />
@@ -260,9 +259,8 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <span
-                  className={`text-sm font-semibold ${
-                    txn.amount >= 0 ? "text-green-500" : "text-red-500"
-                  }`}
+                  className={`text-sm font-semibold ${txn.amount >= 0 ? "text-green-500" : "text-red-500"
+                    }`}
                 >
                   {txn.amount >= 0 ? "+" : ""}
                   {formatCurrency(txn.amount)}
@@ -281,12 +279,12 @@ export default function Dashboard() {
             {(coins && coins.length > 0
               ? coins.slice(0, 5)
               : [
-                  { id: "bitcoin", name: "Bitcoin", symbol: "BTC", current_price: 97500, price_change_percentage_24h: 2.4, image: "" },
-                  { id: "ethereum", name: "Ethereum", symbol: "ETH", current_price: 3250, price_change_percentage_24h: -1.2, image: "" },
-                  { id: "solana", name: "Solana", symbol: "SOL", current_price: 195, price_change_percentage_24h: 5.8, image: "" },
-                  { id: "cardano", name: "Cardano", symbol: "ADA", current_price: 0.92, price_change_percentage_24h: -0.5, image: "" },
-                  { id: "polkadot", name: "Polkadot", symbol: "DOT", current_price: 7.2, price_change_percentage_24h: 1.1, image: "" },
-                ]
+                { id: "bitcoin", name: "Bitcoin", symbol: "BTC", current_price: 97500, price_change_percentage_24h: 2.4, image: "" },
+                { id: "ethereum", name: "Ethereum", symbol: "ETH", current_price: 3250, price_change_percentage_24h: -1.2, image: "" },
+                { id: "solana", name: "Solana", symbol: "SOL", current_price: 195, price_change_percentage_24h: 5.8, image: "" },
+                { id: "cardano", name: "Cardano", symbol: "ADA", current_price: 0.92, price_change_percentage_24h: -0.5, image: "" },
+                { id: "polkadot", name: "Polkadot", symbol: "DOT", current_price: 7.2, price_change_percentage_24h: 1.1, image: "" },
+              ]
             ).map((coin: any) => (
               <div key={coin.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
