@@ -183,6 +183,9 @@ router.get("/summary", async (req: Request, res: Response) => {
       startDate: startOfMonth.toISOString(),
     });
 
+    const accounts = await storage.getAccounts(userId);
+    const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+
     let totalIncome = 0;
     let totalExpenses = 0;
     const categoryTotals: Record<string, number> = {};
@@ -209,6 +212,7 @@ router.get("/summary", async (req: Request, res: Response) => {
       totalIncome: totalIncome.toFixed(2),
       totalExpenses: totalExpenses.toFixed(2),
       savingsRate: savingsRate.toFixed(1),
+      netWorth: totalBalance.toFixed(2),
       topCategories,
     });
   } catch (error) {

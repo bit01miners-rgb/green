@@ -75,6 +75,17 @@ if (process.argv[1] === __filename) {
       serveStatic(app);
     }
 
+    // Verify DB connection
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      await db.execute(sql`SELECT 1`);
+      log("Database connected successfully");
+    } catch (err) {
+      log(`Database connection failed: ${err}`);
+      process.exit(1);
+    }
+
     const PORT = 5000;
     server.listen(PORT, "0.0.0.0", () => {
       log(`serving on port ${PORT}`);
