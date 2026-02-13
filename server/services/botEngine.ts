@@ -5,64 +5,71 @@ import { MomentumAIBot } from './bots/MomentumAIBot';
 import { DCABot } from './bots/DCABot';
 import { SMACrossoverBot } from './bots/strategies/TrendFollowing/SMACrossoverBot';
 import { RSIReversalBot } from './bots/strategies/MeanReversion/RSIReversalBot';
+import { storage } from '../storage';
 
 class BotEngine {
     private bots: Map<string, BaseBot> = new Map();
     private marketDataInterval: NodeJS.Timeout | null = null;
+    private initialized = false;
 
     constructor() {
         this.startMarketDataFeed();
-        this.registerDefaultBots();
     }
 
-    private registerDefaultBots() {
+    public async initialize() {
+        if (this.initialized) return;
+
+        // Load bots from DB
+        const dbBots = await storage.getAllBotStrategies();
+
+        if (dbBots.length === 0) {
+            console.log("Seeding default bots...");
+            await this.seedDefaultBots();
+        } else {
+            console.log(`Loading ${dbBots.length} bots from DB...`);
+            for (const dbBot of dbBots) {
+                const config = dbBot.config as any;
+                const bot = this.instantiateBot(dbBot.strategyType, dbBot.id.toString(), dbBot.name, { ...config, mode: config.mode || 'PAPER' });
+                if (bot) {
+                    this.bots.set(bot.id, bot);
+                    if (dbBot.isActive) {
+                        bot.start();
+                    }
+                }
+            }
+        }
+        this.initialized = true;
+    }
+
+    private async seedDefaultBots() {
         // 1. Grid Bot
-        this.registerBot(new GridTradingBot('grid-1', 'SOL Grid Farmer', {
+        await this.createBot('grid', {
+            name: 'SOL Grid Farmer',
             pair: 'SOL/USDC',
             lowerLimit: 20,
             upperLimit: 150,
             grids: 20,
-            mode: 'LIVE'
-        }));
+            mode: 'LIVE',
+            userId: 1 // Default user
+        });
 
         // 2. Arbitrage Bot
-        this.registerBot(new ArbitrageBot('arb-1', 'CEX-DEX Arb', {
+        await this.createBot('arbitrage', {
+            name: 'CEX-DEX Arb',
             pair: 'ETH/USDC',
             threshold: 2.5,
-            mode: 'PAPER'
-        }));
+            mode: 'PAPER',
+            userId: 1
+        });
 
         // 3. Momentum AI
-        this.registerBot(new MomentumAIBot('ai-1', 'WIF Momentum Speculator', {
+        await this.createBot('momentum', {
+            name: 'WIF Momentum Speculator',
             pair: 'WIF/SOL',
             windowSize: 15,
-            mode: 'LIVE'
-        }));
-
-        // 4. DCA Bot
-        this.registerBot(new DCABot('dca-1', 'Bitcoin Accumulator', {
-            pair: 'BTC/USDT',
-            amountPerTrade: 50,
-            interval: '1d',
-            mode: 'LIVE'
-        }));
-
-        // 5. SMA Crossover
-        this.registerBot(new SMACrossoverBot('sma-1', 'ETH Trend Follower', {
-            pair: 'ETH/USD',
-            fastPeriod: 9,
-            slowPeriod: 21,
-            mode: 'PAPER'
-        }));
-
-        // 6. RSI Reversal
-        this.registerBot(new RSIReversalBot('rsi-1', 'Oversold Sniper', {
-            pair: 'JUP/USDC',
-            rsiPeriod: 14,
-            oversold: 30,
-            overbought: 70,
-            mode: 'LIVE'
-        }));
+            mode: 'LIVE',
+            userId: 1
+        });
     }
 
     public registerBot(bot: BaseBot) {
@@ -70,12 +77,6 @@ class BotEngine {
             console.warn(`Bot ${bot.id} already registered. Overwriting.`);
         }
         this.bots.set(bot.id, bot);
-
-        // Forward logs
-        bot.on('log', (msg) => {
-            // Here we could persist logs to DB or websocket
-            // console.log(`[BOT-${bot.id}] ${msg}`);
-        });
     }
 
     public getBot(id: string): BaseBot | undefined {
@@ -86,17 +87,33 @@ class BotEngine {
         return Array.from(this.bots.values()).map(bot => bot.getStatus());
     }
 
-    public startBot(id: string): boolean {
+    public async startBot(id: string): Promise<boolean> {
         const bot = this.bots.get(id);
         if (!bot) return false;
+
         bot.start();
+
+        // Update DB
+        try {
+            await storage.updateBotStrategy(parseInt(id), { isActive: true });
+        } catch (e) {
+            console.error(`Failed to update bot ${id} status in DB`, e);
+        }
         return true;
     }
 
-    public stopBot(id: string): boolean {
+    public async stopBot(id: string): Promise<boolean> {
         const bot = this.bots.get(id);
         if (!bot) return false;
+
         bot.stop();
+
+        // Update DB
+        try {
+            await storage.updateBotStrategy(parseInt(id), { isActive: false });
+        } catch (e) {
+            console.error(`Failed to update bot ${id} status in DB`, e);
+        }
         return true;
     }
 
@@ -116,57 +133,49 @@ class BotEngine {
         ];
     }
 
-    public createBot(type: string, config: any): BaseBot | null {
-        const id = `bot-${Date.now()}`;
-        const name = config.name || `${type.toUpperCase()} Bot`;
-
-        let bot: BaseBot | null = null;
-
+    public instantiateBot(type: string, id: string, name: string, config: any): BaseBot | null {
         switch (type) {
-            case 'grid':
-                bot = new GridTradingBot(id, name, { ...config, mode: config.mode || 'PAPER' });
-                break;
-            case 'arbitrage':
-                bot = new ArbitrageBot(id, name, { ...config, mode: config.mode || 'PAPER' });
-                break;
-            case 'momentum':
-                bot = new MomentumAIBot(id, name, { ...config, mode: config.mode || 'PAPER' });
-                break;
-            case 'dca':
-                bot = new DCABot(id, name, { ...config, mode: config.mode || 'PAPER' });
-                break;
-            case 'sma-crossover':
-                bot = new SMACrossoverBot(id, name, { ...config, mode: config.mode || 'PAPER' });
-                break;
-            case 'rsi-reversal':
-                bot = new RSIReversalBot(id, name, { ...config, mode: config.mode || 'PAPER' });
-                break;
+            case 'grid': return new GridTradingBot(id, name, config);
+            case 'arbitrage': return new ArbitrageBot(id, name, config);
+            case 'momentum': return new MomentumAIBot(id, name, config);
+            case 'dca': return new DCABot(id, name, config);
+            case 'sma-crossover': return new SMACrossoverBot(id, name, config);
+            case 'rsi-reversal': return new RSIReversalBot(id, name, config);
             default:
                 console.error(`Unknown bot type: ${type}`);
                 return null;
         }
+    }
 
-        if (bot) {
-            this.registerBot(bot);
-            return bot;
+    public async createBot(type: string, config: any): Promise<BaseBot | null> {
+        // Save to DB first to get ID
+        const userId = config.userId || 1; // Fallback to 1 if not provided (system bot)
+
+        try {
+            const dbBot = await storage.createBotStrategy({
+                userId,
+                name: config.name || `${type.toUpperCase()} Bot`,
+                strategyType: type,
+                config: config,
+                isActive: false,
+                riskLevel: 5
+            });
+
+            const id = dbBot.id.toString();
+            const bot = this.instantiateBot(type, id, dbBot.name, { ...config, mode: config.mode || 'PAPER' });
+
+            if (bot) {
+                this.registerBot(bot);
+                return bot;
+            }
+        } catch (e) {
+            console.error("Failed to create bot in DB", e);
         }
         return null;
     }
 
-    // Centralized market data feeed (Mocked for now)
-    // In a real system, this would connect to websocket streams from Binance/Coinbase
-    // and dispatch updates to relevant bots based on their subscription (pair/interval)
     private startMarketDataFeed() {
         if (this.marketDataInterval) clearInterval(this.marketDataInterval);
-
-        // this.marketDataInterval = setInterval(() => {
-        //   this.bots.forEach(bot => {
-        //     if (bot.status === 'running') {
-        //         // In the BaseBot.runLoop we are currently fetching data individually
-        //         // Optimally we push data here: bot.onMarketData(data)
-        //     }
-        //   });
-        // }, 1000);
     }
 }
 

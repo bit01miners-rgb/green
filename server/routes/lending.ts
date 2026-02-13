@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { storage } from "../storage";
 import { calculateCreditScore } from "../services/riskScoring";
+import { getCoinPrice } from "../services/marketData";
 
 const router = Router();
 
@@ -42,13 +43,45 @@ router.post("/supply", async (req: Request, res: Response) => {
 
     const numAmount = Number(amount);
 
-    // Check if position exists
+    // Check for market data in DB
+    let marketAsset = await storage.getMarketAsset(asset);
+
+    // Lazy Load: If not in DB, fetch from CoinGecko and store
+    if (!marketAsset) {
+      try {
+        const prices = await getCoinPrice(asset.toLowerCase());
+        const data = prices[asset.toLowerCase()];
+        const price = data?.usd || 0;
+
+        marketAsset = await storage.createMarketAsset({
+          symbol: asset,
+          name: asset,
+          coingeckoId: asset.toLowerCase(),
+          currentPrice: price,
+          currentApy: 5.0, // Default for new assets, should be updated by a cron job
+        });
+      } catch (e) {
+        // Fallback if API fails, still better than hard crash, but log it
+        console.error(`Failed to fetch initial price for ${asset}`, e);
+        marketAsset = await storage.createMarketAsset({
+          symbol: asset,
+          name: asset,
+          coingeckoId: asset.toLowerCase(),
+          currentPrice: 0,
+          currentApy: 0,
+        });
+      }
+    }
+
+    const currentPrice = marketAsset.currentPrice;
+    const currentApy = marketAsset.currentApy || 0;
+
     let position = await storage.getDefiPositionByToken(userId, "GreenLend", asset);
 
     if (position) {
       position = await storage.updateDefiPosition(position.id, {
         depositedAmount: position.depositedAmount + numAmount,
-        currentValue: (position.depositedAmount + numAmount) * 1, // simplified 1:1 value
+        currentValue: (position.depositedAmount + numAmount) * currentPrice,
       });
     } else {
       position = await storage.createDefiPosition({
@@ -57,8 +90,8 @@ router.post("/supply", async (req: Request, res: Response) => {
         poolName: `${asset} Supply Pool`,
         chain: "GreenChain",
         depositedAmount: numAmount,
-        currentValue: numAmount,
-        apy: 5.0, // Mock APY
+        currentValue: numAmount * currentPrice,
+        apy: currentApy,
         tokenA: asset,
       });
     }
@@ -98,9 +131,12 @@ router.post("/withdraw", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Insufficient balance to withdraw" });
     }
 
+    let marketAsset = await storage.getMarketAsset(asset);
+    const price = marketAsset?.currentPrice || 0;
+
     const updatedPosition = await storage.updateDefiPosition(position.id, {
       depositedAmount: position.depositedAmount - numAmount,
-      currentValue: (position.depositedAmount - numAmount) * 1,
+      currentValue: (position.depositedAmount - numAmount) * price,
     });
 
     // Record Transaction
@@ -133,10 +169,14 @@ router.post("/borrow", async (req: Request, res: Response) => {
 
     const numAmount = Number(amount);
 
-    // TODO: Validate collateral (simplified for now)
-    // const positions = await storage.getDefiPositions(userId);
-    // const totalCollateral = positions.reduce((sum, p) => sum + p.currentValue, 0);
-    // if (totalCollateral * 0.8 < numAmount) return res.status(400).json({ error: "Insufficient collateral"});
+    // Validate collateral
+    const positions = await storage.getDefiPositions(userId);
+    const totalCollateral = positions.reduce((sum, p) => sum + p.currentValue, 0);
+
+    // 80% LTV ratio
+    if (totalCollateral * 0.8 < numAmount) {
+      return res.status(400).json({ error: `Insufficient collateral. You have $${totalCollateral.toFixed(2)} collateral, allowing for a max borrow of $${(totalCollateral * 0.8).toFixed(2)}` });
+    }
 
     const loan = await storage.createLoan({
       userId,
@@ -180,16 +220,34 @@ router.post("/repay", async (req: Request, res: Response) => {
 
     const numAmount = Number(amount);
 
-    // In a real app we'd fetch the loan first to check balance
-    // For now assuming the ID is valid for simplicity of wiring
-    // const loan = await storage.getLoan(loanId); 
+    // Fetch loan to verify ownership and update balance
+    const loan = await storage.getLoan(loanId);
 
-    // Update loan balance (logic simplified as we don't have updateLoanBalance handy in this snippet context but easy to add)
-    // For now just record the transaction
+    if (!loan) {
+      return res.status(404).json({ error: "Loan not found" });
+    }
+
+    if (loan.userId !== userId) {
+      return res.status(403).json({ error: "Unauthorized to repay this loan" });
+    }
+
+    // Check overpayment
+    if (loan.balance < numAmount) {
+      // Optionally allow overpayment but warn or just cap it?
+      // For now, let's just proceed and set balance to 0 if it goes below.
+    }
+
+    const newBalance = Math.max(0, loan.balance - numAmount);
+    const newStatus = newBalance === 0 ? "paid_off" : "active";
+
+    await storage.updateLoan(loanId, {
+      balance: newBalance,
+      status: newStatus,
+    });
 
     await storage.createTransaction({
       userId,
-      accountId: null as unknown as number,
+      accountId: null as unknown as number, // Still null as we don't have account selection
       amount: -numAmount,
       type: "expense",
       category: "Loan Repayment",
@@ -197,7 +255,7 @@ router.post("/repay", async (req: Request, res: Response) => {
       date: new Date(),
     });
 
-    return res.json({ success: true, message: "Repayment recorded" });
+    return res.json({ success: true, message: "Repayment recorded", newBalance, status: newStatus });
   } catch (error) {
     console.error("Repay error:", error);
     return res.status(500).json({ error: "Failed to repay loan" });

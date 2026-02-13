@@ -1,5 +1,6 @@
 
-import { ethers } from "hardhat";
+import hre from "hardhat";
+const { ethers } = hre as any;
 
 async function main() {
     const [deployer] = await ethers.getSigners();

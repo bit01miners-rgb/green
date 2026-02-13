@@ -1,3 +1,4 @@
+// @ts-ignore
 import Sentiment from "sentiment";
 import { getTopCoins } from "../marketData";
 

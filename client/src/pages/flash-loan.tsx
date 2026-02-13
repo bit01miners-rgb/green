@@ -27,7 +27,10 @@ export default function FlashLoanExecutor() {
 
     const mutation = useMutation({
         mutationFn: async (data: any) => {
-            const res = await apiRequest("POST", "/api/defi/flash-loan", data);
+            const res = await apiRequest("/api/defi/flash-loan", {
+                method: "POST",
+                body: JSON.stringify(data)
+            });
             return res.json();
         },
         onSuccess: (data: FlashLoanResult) => {

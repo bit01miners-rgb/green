@@ -1,4 +1,4 @@
-import { getTopCoins, getCoinPrice } from "../marketData";
+import { getTopCoins, getCoinPrice, getCoinTickers } from "../marketData";
 
 interface ArbitrageOpportunity {
     symbol: string;
@@ -11,41 +11,48 @@ interface ArbitrageOpportunity {
 }
 
 // Mock exchanges for simulation (since Coingecko free tier doesn't give real-time order books easily)
-const EXCHANGES = ["Binance", "Coinbase", "Kraken", "Uniswap V3", "SushiSwap"];
+const EXCHANGES = ["Binance", "Coinbase", "Kraken", "Uniswap V3", "SushiSwap"]; // Keep for filtering reliable exchanges if needed or just use all
 
 export async function scanArbitrageOpportunities(): Promise<ArbitrageOpportunity[]> {
     try {
-        const coins = await getTopCoins(10);
+        const topCoins = await getTopCoins(10);
         const opportunities: ArbitrageOpportunity[] = [];
 
-        // Simulate scanning multiple exchanges
-        // In a real "God Mode" implementation, this would connect to CCXT or direct exchange WebSockets
-        for (const coin of coins as any[]) {
-            const basePrice = coin.current_price;
+        // For performance, limit checking to top 5 or just parallelism carefully
+        const coinsToCheck = topCoins.slice(0, 5);
 
-            // Generate realistic price variations
-            const variations = EXCHANGES.map(ex => ({
-                name: ex,
-                price: basePrice * (1 + (Math.random() * 0.02 - 0.01)) // +/- 1% spread
-            }));
+        for (const coin of coinsToCheck as any[]) {
+            const tickers = await getCoinTickers(coin.id);
 
-            // Find min buy and max sell
-            const sorted = variations.sort((a, b) => a.price - b.price);
-            const min = sorted[0];
-            const max = sorted[sorted.length - 1];
+            // Filter pairs against USD/USDT/USDC
+            const usdTickers = tickers.filter((t: any) =>
+                ["USD", "USDT", "USDC"].includes(t.target) &&
+                t.trust_score === "green" // Only trusted exchanges
+            );
+
+            if (usdTickers.length < 2) continue;
+
+            // Normalize prices (trivial if all are roughly 1:1, but technically USDT != USD. For MVP, treat as same)
+            const prices = usdTickers.map((t: any) => ({
+                exchange: t.market.name,
+                price: t.last,
+                volume: t.volume
+            })).sort((a: any, b: any) => a.price - b.price);
+
+            const min = prices[0];
+            const max = prices[prices.length - 1];
 
             const spread = (max.price - min.price) / min.price;
 
-            // "AI" Filter: Only high confidence > 0.5% spread
-            if (spread > 0.005) {
+            if (spread > 0.005) { // 0.5%
                 opportunities.push({
                     symbol: coin.symbol.toUpperCase(),
-                    buyAt: min.name,
-                    sellAt: max.name,
+                    buyAt: min.exchange,
+                    sellAt: max.exchange,
                     buyPrice: min.price,
                     sellPrice: max.price,
                     profitPct: spread * 100,
-                    confidence: Math.min(0.99, spread * 50 + 0.5) // Fake AI confidence score
+                    confidence: 0.85 // Real data confidence
                 });
             }
         }

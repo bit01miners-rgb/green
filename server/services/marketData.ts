@@ -109,3 +109,20 @@ export async function getTrending() {
   setCache(cacheKey, data.coins || []);
   return data.coins || [];
 }
+
+export async function getCoinTickers(id: string) {
+  const cacheKey = `tickers_${id}`;
+  const cached = getCached<any>(cacheKey);
+  if (cached) return cached;
+
+  // Use a simpler endpoint or handle errors gracefully as tickes can be heavy
+  const url = `${COINGECKO_BASE}/coins/${id}/tickers?depth=true`;
+  try {
+    const data = await fetchJSON<{ tickers: any[] }>(url);
+    setCache(cacheKey, data.tickers || []);
+    return data.tickers || [];
+  } catch (e) {
+    console.error(`Failed to fetch tickers for ${id}`, e);
+    return [];
+  }
+}

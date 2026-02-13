@@ -28,11 +28,11 @@ router.get("/posts", async (req, res) => {
 // Create post
 router.post("/posts", async (req, res) => {
     // Cast to any to bypass TS check for isAuthenticated
-    if (!(req as any).isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.session.userId) return res.status(401).send("Unauthorized");
 
     try {
         const newPost = await db.insert(forumPosts).values({
-            userId: (req as any).user!.id,
+            userId: req.session.userId!,
             title: req.body.title,
             content: req.body.content,
             category: req.body.category || "General",

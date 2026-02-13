@@ -13,6 +13,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
+import WalletConsolidation from "@/components/WalletConsolidation";
 
 const demoAccounts = [
   { id: 1, name: "Main Checking", type: "checking", balance: 12450.80, currency: "USD", institution: "Chase", color: "#3b82f6" },
@@ -72,10 +73,18 @@ export default function Banking() {
       </div>
 
       {/* Total Balance */}
-      <div className="rounded-xl border border-primary/30 bg-primary/5 p-6">
-        <p className="text-sm text-muted-foreground">Total Balance</p>
-        <p className="mt-1 text-3xl font-bold text-foreground">{formatCurrency(totalBalance)}</p>
-        <p className="mt-1 text-sm text-muted-foreground">Across {(accts as any[]).length} accounts</p>
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
+        {/* Total Balance */}
+        <div className="lg:col-span-2 rounded-xl border border-primary/30 bg-primary/5 p-6 flex flex-col justify-center">
+          <p className="text-sm text-muted-foreground">Total Balance</p>
+          <p className="mt-1 text-3xl font-bold text-foreground">{formatCurrency(totalBalance)}</p>
+          <p className="mt-1 text-sm text-muted-foreground">Across {(accts as any[]).length} accounts</p>
+        </div>
+
+        {/* Wallet Consolidation */}
+        <div className="lg:col-span-1">
+          <WalletConsolidation />
+        </div>
       </div>
 
       {/* Transfer Form */}

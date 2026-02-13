@@ -175,4 +175,33 @@ router.get("/statements/:accountId", async (req: Request, res: Response) => {
   }
 });
 
+// POST /credit-deposit-batch
+import { creditDepositBatch } from "../services/bankingService";
+
+router.post("/credit-deposit-batch", async (req: Request, res: Response) => {
+  try {
+    const userId = req.session.userId!;
+    const { tokens, txHashes } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
+      return res.status(400).json({ error: "No tokens provided" });
+    }
+
+    const result = await creditDepositBatch(userId.toString(), tokens, txHashes || []);
+
+    return res.status(201).json({
+      success: true,
+      message: "Deposit credited successfully",
+      updatedHoldings: result // assuming result is the updated holdings
+    });
+  } catch (error) {
+    console.error("Credit deposit error:", error);
+    return res.status(500).json({ error: (error as Error).message || "Failed to process deposit credit" });
+  }
+});
+
 export default router;

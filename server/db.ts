@@ -9,5 +9,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 const connectionString = process.env.DATABASE_URL;
-const client = postgres(connectionString);
+const client = postgres(connectionString, {
+    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined
+});
 export const db = drizzle(client, { schema });

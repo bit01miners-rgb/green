@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot } from 'recharts';
+import { BacktestPanel } from "@/components/BacktestPanel"; // Import BacktestPanel
 
 // --- Types ---
 
@@ -272,6 +273,9 @@ export default function TradingBots() {
                     <TabsTrigger value="studio" className="data-[state=active]:bg-primary/10 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-6">
                         <Cpu className="h-4 w-4 mr-2" /> Studio Marketplace
                     </TabsTrigger>
+                    <TabsTrigger value="backtest" className="data-[state=active]:bg-primary/10 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-6">
+                        <BarChartIcon className="h-4 w-4 mr-2" /> Strategy Backtest
+                    </TabsTrigger>
                 </TabsList>
 
                 {/* --- TERMINAL VIEW --- */}
@@ -428,6 +432,12 @@ export default function TradingBots() {
                         ))}
                     </div>
                 </TabsContent>
+
+                {/* --- BACKTEST VIEW --- */}
+                <TabsContent value="backtest" className="flex-1 mt-4 overflow-hidden">
+                    <BacktestPanel />
+                </TabsContent>
+
             </Tabs>
 
             {/* Create Dialog */}

@@ -263,6 +263,31 @@ export const botStrategies = pgTable("bot_strategies", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ==================== PROCESSED CHAIN TRANSACTIONS ====================
+export const processedChainTransactions = pgTable("processed_chain_transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  txHash: text("tx_hash").notNull().unique(),
+  chainId: integer("chain_id").notNull(), // e.g. 1 for mainnet
+  symbol: text("symbol").notNull(),
+  amount: real("amount").notNull(),
+  fromAddress: text("from_address"),
+  toAddress: text("to_address"),
+  status: text("status").notNull().default("pending"), // pending, confirmed, failed
+  processedAt: timestamp("processed_at").defaultNow().notNull(),
+});
+
+// ==================== MARKET ASSETS (Price & APY Source of Truth) ====================
+export const marketAssets = pgTable("market_assets", {
+  id: serial("id").primaryKey(),
+  symbol: text("symbol").notNull().unique(), // e.g., 'ETH', 'USDC'
+  name: text("name").notNull(),
+  coingeckoId: text("coingecko_id").notNull(), // for fetching updates
+  currentPrice: real("current_price").notNull().default(0),
+  currentApy: real("current_apy").default(0), // for lending protocols
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+});
+
 // ==================== RELATIONS ====================
 export const usersRelations = relations(users, ({ many, one }) => ({
   accounts: many(accounts),
@@ -328,3 +353,5 @@ export type ComplianceAlert = typeof complianceAlerts.$inferSelect;
 export type InsertComplianceAlert = typeof complianceAlerts.$inferInsert;
 export type BotStrategy = typeof botStrategies.$inferSelect;
 export type InsertBotStrategy = typeof botStrategies.$inferInsert;
+export type MarketAsset = typeof marketAssets.$inferSelect;
+export type InsertMarketAsset = typeof marketAssets.$inferInsert;

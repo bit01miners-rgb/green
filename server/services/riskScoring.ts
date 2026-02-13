@@ -101,16 +101,44 @@ export async function calculateCreditScore(userId: number): Promise<CreditScoreR
 }
 
 // Simulated on-chain analysis
+// On-chain analysis based on DB records
 async function calculateOnChainScore(userId: number): Promise<{ score: number, details: string }> {
-  // In a real implementation, we would fetch the user's wallet address from storage
-  // const user = await storage.getUser(userId);
-  // const address = user.walletAddress;
-  // const history = await etherscan.getHistory(address);
+  const [wallets, transactions] = await Promise.all([
+    storage.getWalletConnections(userId),
+    storage.getChainTransactions(userId),
+  ]);
 
-  // Simulating a "good" on-chain history for now
+  if (wallets.length === 0) {
+    return {
+      score: 50, // Neutral starting point
+      details: "No wallet connected. Connect a wallet to build on-chain history."
+    };
+  }
+
+  const txCount = transactions.length;
+  const totalVolume = transactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+
+  let score = 60; // Base score for having a wallet
+  let detailsParts = [`${wallets.length} wallet(s) connected.`];
+
+  if (txCount > 0) {
+    score += Math.min(20, txCount * 2); // Up to 20 points for transactions
+    detailsParts.push(`${txCount} on-chain transaction(s) processed.`);
+  }
+
+  if (totalVolume > 1000) {
+    score += 10;
+    detailsParts.push("High transaction volume detected.");
+  } else if (totalVolume > 0) {
+    score += 5;
+  }
+
+  // Cap score
+  score = Math.min(100, score);
+
   return {
-    score: 85,
-    details: "Wallet active since 2024. 50+ successful transactions. No involvement in high-risk contracts."
+    score,
+    details: detailsParts.join(" ")
   };
 }
 

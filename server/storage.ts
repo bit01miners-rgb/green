@@ -16,6 +16,9 @@ import {
   defiPositions,
   aiChatHistory,
   creditProfiles,
+  marketAssets,
+  processedChainTransactions,
+  botStrategies,
 } from "@shared/schema";
 import type {
   User,
@@ -234,6 +237,20 @@ export class Storage {
     return loan;
   }
 
+  async getLoan(id: number) {
+    const [loan] = await db.select().from(loans).where(eq(loans.id, id));
+    return loan || null;
+  }
+
+  async updateLoan(id: number, data: Partial<typeof loans.$inferInsert>) {
+    const [loan] = await db
+      .update(loans)
+      .set(data)
+      .where(eq(loans.id, id))
+      .returning();
+    return loan;
+  }
+
   async getLoanApplications(userId: number) {
     return db
       .select()
@@ -417,6 +434,60 @@ export class Storage {
       savingsRate: savingsRate.toFixed(1),
       accountCount: userAccounts.length,
     };
+  }
+  // ── Market Assets ──────────────────────────────────────────────────
+
+  async getMarketAsset(symbol: string) {
+    const [asset] = await db
+      .select()
+      .from(marketAssets)
+      .where(eq(marketAssets.symbol, symbol.toUpperCase())); // Normalized to upper case
+    return asset || null;
+  }
+
+  async createMarketAsset(data: typeof marketAssets.$inferInsert) {
+    const [asset] = await db.insert(marketAssets).values({
+      ...data,
+      symbol: data.symbol.toUpperCase()
+    }).returning();
+    return asset;
+  }
+
+  async updateMarketAsset(symbol: string, data: Partial<typeof marketAssets.$inferInsert>) {
+    const [asset] = await db
+      .update(marketAssets)
+      .set({ ...data, lastUpdated: new Date() })
+      .where(eq(marketAssets.symbol, symbol.toUpperCase()))
+      .returning();
+    return asset;
+  }
+
+  async getChainTransactions(userId: number) {
+    return db
+      .select()
+      .from(processedChainTransactions)
+      .where(eq(processedChainTransactions.userId, userId))
+      .orderBy(desc(processedChainTransactions.processedAt));
+  }
+
+  // ── Bot Strategies ─────────────────────────────────────────────────
+
+  async getAllBotStrategies() {
+    return db.select().from(botStrategies);
+  }
+
+  async createBotStrategy(data: typeof botStrategies.$inferInsert) {
+    const [strategy] = await db.insert(botStrategies).values(data).returning();
+    return strategy;
+  }
+
+  async updateBotStrategy(id: number, data: Partial<typeof botStrategies.$inferInsert>) {
+    const [strategy] = await db
+      .update(botStrategies)
+      .set(data)
+      .where(eq(botStrategies.id, id))
+      .returning();
+    return strategy;
   }
 }
 

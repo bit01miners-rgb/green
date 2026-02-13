@@ -1,6 +1,9 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import helmet from "helmet";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
 
 import { createServer } from "http";
@@ -16,6 +19,24 @@ function log(message: string) {
 }
 
 const app = express();
+
+// Security Middleware
+app.use(helmet({
+  contentSecurityPolicy: false, // Disabled for now to avoid breaking scripts in MVP
+}));
+app.use(cors({
+  origin: process.env.CLIENT_URL || true, // Allow all in dev, specific in prod
+  credentials: true,
+}));
+
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later."
+});
+app.use("/api/", limiter);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -93,12 +114,16 @@ if (process.argv[1] === __filename) {
       const { sql } = await import("drizzle-orm");
       await db.execute(sql`SELECT 1`);
       log("Database connected successfully");
+
+      const { botManager } = await import("./services/botEngine");
+      await botManager.initialize();
+      log("Bot Engine initialized");
     } catch (err) {
       log(`Database connection failed: ${err}`);
       process.exit(1);
     }
 
-    const PORT = 5000;
+    const PORT = Number(process.env.PORT || 5000);
     server.listen(PORT, "0.0.0.0", () => {
       log(`serving on port ${PORT}`);
     });

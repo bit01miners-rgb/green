@@ -18,11 +18,11 @@ router.get("/offers", async (req, res) => {
 // Create an offer
 router.post("/offers", async (req, res) => {
     // Cast to any to bypass TS check for isAuthenticated/user which are added by passport
-    if (!(req as any).isAuthenticated()) return res.status(401).send("Unauthorized");
+    if (!req.session.userId) return res.status(401).send("Unauthorized");
 
     try {
         const newOffer = await db.insert(p2pOffers).values({
-            userId: (req as any).user!.id,
+            userId: req.session.userId!,
             ...req.body,
             status: "active"
         }).returning();

@@ -46,20 +46,26 @@ export function ConnectWallet() {
                 } catch (e) {
                     console.error("Failed to save wallet to backend", e);
                     // Don't block UI if backend fails (e.g. already exists)
+                    // Don't block UI if backend fails (e.g. already exists)
                 }
 
-                toast.success("Wallet Connected", {
+                toast({
+                    title: "Wallet Connected",
                     description: `Connected to ${account.substring(0, 6)}...${account.substring(38)}`,
                 });
             } catch (error) {
                 console.error("Connection error:", error);
-                toast.error("Connection Failed", {
+                toast({
+                    title: "Connection Failed",
                     description: "Could not connect to wallet. Please try again.",
+                    variant: "destructive",
                 });
             }
         } else {
-            toast.error("Wallet Not Found", {
+            toast({
+                title: "Wallet Not Found",
                 description: "Please install MetaMask or another Web3 wallet.",
+                variant: "destructive",
             });
         }
     };

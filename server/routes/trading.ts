@@ -7,7 +7,9 @@ const router = Router();
 // GET /api/trading/portfolio
 router.get("/portfolio", async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId!;
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
     const holdings = await storage.getHoldings(userId);
 
     // Fetch current prices for all holdings
@@ -49,7 +51,9 @@ router.get("/portfolio", async (req: Request, res: Response) => {
 // POST /api/trading/portfolio
 router.post("/portfolio", async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId!;
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
     const { symbol, name, quantity, avgCost, assetType, chain } = req.body;
 
     if (!symbol || !quantity || !avgCost) {
@@ -76,6 +80,9 @@ router.post("/portfolio", async (req: Request, res: Response) => {
 // DELETE /api/trading/portfolio/:id
 router.delete("/portfolio/:id", async (req: Request, res: Response) => {
   try {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
     const id = parseInt(req.params.id);
     await storage.deleteHolding(id);
     return res.json({ message: "Holding deleted" });
@@ -88,7 +95,9 @@ router.delete("/portfolio/:id", async (req: Request, res: Response) => {
 // GET /api/trading/watchlist
 router.get("/watchlist", async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId!;
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
     const items = await storage.getWatchlist(userId);
     return res.json(items);
   } catch (error) {
@@ -100,7 +109,9 @@ router.get("/watchlist", async (req: Request, res: Response) => {
 // POST /api/trading/watchlist
 router.post("/watchlist", async (req: Request, res: Response) => {
   try {
-    const userId = req.session.userId!;
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
     const { symbol, assetType } = req.body;
 
     if (!symbol) {
@@ -123,6 +134,9 @@ router.post("/watchlist", async (req: Request, res: Response) => {
 // DELETE /api/trading/watchlist/:id
 router.delete("/watchlist/:id", async (req: Request, res: Response) => {
   try {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
     const id = parseInt(req.params.id);
     await storage.removeFromWatchlist(id);
     return res.json({ message: "Removed from watchlist" });

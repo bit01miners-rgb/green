@@ -6,7 +6,12 @@ const router = Router();
 // POST /api/token/mint
 router.post("/mint", async (req: Request, res: Response) => {
     try {
-        const userId = req.session.userId!;
+        const userId = req.session.userId;
+
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
         const { name, symbol, supply, decimals, chain, type } = req.body;
 
         if (!name || !symbol || !supply) {
