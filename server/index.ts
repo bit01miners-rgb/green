@@ -2,8 +2,18 @@ import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+
 import { createServer } from "http";
+
+function log(message: string) {
+  const formattedTime = new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+  console.log(`${formattedTime} [express] ${message}`);
+}
 
 const app = express();
 app.use(express.json());
@@ -70,8 +80,10 @@ const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] === __filename) {
   (async () => {
     if (app.get("env") === "development") {
+      const { setupVite } = await import("./vite");
       await setupVite(app, server);
     } else {
+      const { serveStatic } = await import("./vite");
       serveStatic(app);
     }
 

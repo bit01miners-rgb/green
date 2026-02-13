@@ -12,8 +12,12 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["client/src/*"],
-      "@shared/*": ["shared/*"]
+      "@/*": [
+        "client/src/*"
+      ],
+      "@shared/*": [
+        "shared/*"
+      ]
     },
     "outDir": "dist",
     "declaration": true
@@ -21,6 +25,7 @@
   "include": [
     "client/src/**/*",
     "server/**/*",
-    "shared/**/*"
+    "shared/**/*",
+    "scripts"
   ]
 }

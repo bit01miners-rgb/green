@@ -1,20 +1,26 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  Wallet,
   ArrowLeftRight,
-  TrendingUp,
-  Landmark,
-  CreditCard,
-  FileText,
-  Building2,
   Bot,
-  Settings,
-  LogOut,
-  Leaf,
+  Building2,
   CircleDollarSign,
+  Coins,
+  CreditCard,
+  EyeOff,
+  FileText,
+  Landmark,
+  LayoutDashboard,
+  Leaf,
+  LogOut,
+  MessageSquare,
   PiggyBank,
+  Settings,
+  Shield,
+  TrendingUp,
+  Users,
+  Wallet,
+  Zap
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -29,6 +35,15 @@ const navItems = [
   { label: "Commercial", href: "/commercial", icon: Building2 },
   { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "AI Advisor", href: "/ai", icon: Bot },
+  { label: "Trading Bots", href: "/bots", icon: Bot }, // Moved Trading Bots here
+  { label: "AI Arbitrage", href: "/arbitrage", icon: TrendingUp },
+  { label: "Flash Loan", href: "/flash-loan", icon: Zap },
+  { label: "Optimizer", href: "/collateral", icon: Shield },
+  { label: "Sentiment Bot", href: "/sentiment", icon: TrendingUp },
+  { label: "Token Minting", href: "/mint", icon: Coins }, // Added Token Minting
+  { label: "Privacy Pool", href: "/privacy", icon: Shield }, // Changed icon for Privacy Pool
+  { label: "P2P Trading", href: "/p2p", icon: Users },
+  { label: "Community", href: "/community", icon: MessageSquare },
   { label: "Wallets", href: "/wallets", icon: Wallet },
 ];
 
@@ -79,6 +94,14 @@ export function Sidebar() {
 
       {/* Bottom */}
       <div className="border-t border-sidebar-border px-3 py-3">
+        {user?.role === 'admin' && (
+          <Link href="/admin">
+            <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors cursor-pointer mb-2">
+              <Settings className="h-4 w-4 shrink-0" />
+              Admin Panel
+            </div>
+          </Link>
+        )}
         {bottomItems.map((item) => (
           <Link key={item.href} href={item.href}>
             <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors cursor-pointer">

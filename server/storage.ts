@@ -62,6 +62,25 @@ export class Storage {
     return user;
   }
 
+  async getAllUsers() {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUser(id: number, data: Partial<typeof users.$inferInsert>) {
+    const [user] = await db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async deleteUser(id: number) {
+    // Note: This might fail if there are foreign key constraints without CASCADE
+    // Ideally we would delete related records first or use CASCADE in schema
+    await db.delete(users).where(eq(users.id, id));
+  }
+
   // ── Accounts ───────────────────────────────────────────────────────
 
   async getAccounts(userId: number) {
@@ -294,6 +313,29 @@ export class Storage {
 
   async createDefiPosition(data: typeof defiPositions.$inferInsert) {
     const [position] = await db.insert(defiPositions).values(data).returning();
+    return position;
+  }
+
+  async getDefiPositionByToken(userId: number, protocol: string, tokenSymbol: string) {
+    const [position] = await db
+      .select()
+      .from(defiPositions)
+      .where(
+        and(
+          eq(defiPositions.userId, userId),
+          eq(defiPositions.protocol, protocol),
+          eq(defiPositions.tokenA, tokenSymbol)
+        )
+      );
+    return position || null;
+  }
+
+  async updateDefiPosition(id: number, data: Partial<typeof defiPositions.$inferInsert>) {
+    const [position] = await db
+      .update(defiPositions)
+      .set(data)
+      .where(eq(defiPositions.id, id))
+      .returning();
     return position;
   }
 

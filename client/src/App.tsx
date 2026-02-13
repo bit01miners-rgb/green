@@ -14,9 +14,20 @@ import AiAdvisor from "./pages/ai-advisor";
 import SettingsPage from "./pages/settings";
 import Login from "./pages/login";
 import Landing from "./pages/landing";
+import About from "./pages/about";
 import NotFound from "./pages/not-found";
 import Compliance from "./pages/compliance";
-import TokenMinting from "./pages/token-minting";
+
+import PrivacyPool from "@/pages/privacy";
+import TokenMinting from "@/pages/mint";
+import CollateralOptimizer from "@/pages/collateral";
+import FlashLoanExecutor from "@/pages/flash-loan";
+import ArbitrageScanner from "@/pages/arbitrage";
+import SentimentBot from "@/pages/sentiment";
+import AdminDashboard from "@/pages/admin-dashboard";
+import P2PTrading from "./pages/p2p";
+import Community from "./pages/community";
+import TradingBots from "./pages/bots";
 
 function AuthenticatedApp() {
   return (
@@ -35,7 +46,17 @@ function AuthenticatedApp() {
         <Route path="/wallets" component={DeFi} />
         <Route path="/settings" component={SettingsPage} />
         <Route path="/compliance" component={Compliance} />
+
+        <Route path="/privacy" component={PrivacyPool} />
+        <Route path="/p2p" component={P2PTrading} />
+        <Route path="/community" component={Community} />
+        <Route path="/bots" component={TradingBots} />
+        <Route path="/flash-loan" component={FlashLoanExecutor} />
+        <Route path="/collateral" component={CollateralOptimizer} />
+        <Route path="/arbitrage" component={ArbitrageScanner} />
         <Route path="/mint" component={TokenMinting} />
+        <Route path="/sentiment" component={SentimentBot} />
+        <Route path="/admin" component={AdminDashboard} />
         <Route component={NotFound} />
       </Switch>
     </AppShell>
@@ -43,7 +64,9 @@ function AuthenticatedApp() {
 }
 
 export default function App() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
+
+
 
   if (isLoading) {
     return (
@@ -60,6 +83,8 @@ export default function App() {
     return (
       <Switch>
         <Route path="/login" component={Login} />
+        <Route path="/about" component={About} />
+        <Route path="/" component={Landing} />
         <Route component={Landing} />
       </Switch>
     );

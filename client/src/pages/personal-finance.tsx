@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useTransactions, useBudgets, useSavingsGoals, useFinanceSummary, useCreateTransaction } from "@/hooks/useTransactions";
+import { useTransactions, useBudgets, useSavingsGoals, useCreateTransaction } from "@/hooks/useTransactions";
 import { formatCurrency } from "@/lib/utils";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Plus,
   ArrowUpRight,
@@ -10,20 +10,49 @@ import {
   PiggyBank,
   TrendingUp,
   TrendingDown,
-  Filter,
+  Wallet,
+  Calendar,
+  CreditCard,
+  DollarSign
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
+  ResponsiveContainer,
+  Tooltip
 } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const CATEGORY_COLORS: Record<string, string> = {
   food: "#f97316", transport: "#3b82f6", entertainment: "#a855f7",
@@ -66,16 +95,23 @@ const demoTransactions = [
 ];
 
 export default function PersonalFinance() {
-  const [showAddTxn, setShowAddTxn] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [txnForm, setTxnForm] = useState({ description: "", amount: "", category: "food", type: "expense" });
-  const { data: transactions } = useTransactions();
-  const { data: budgets } = useBudgets();
-  const { data: goals } = useSavingsGoals();
+  const { toast } = useToast();
+
+  const { data: transactions, isLoading: isTxLoading } = useTransactions();
+  const { data: budgets, isLoading: isBudgetLoading } = useBudgets();
+  const { data: goals, isLoading: isGoalLoading } = useSavingsGoals();
   const createTxn = useCreateTransaction();
 
-  const txns = transactions && transactions.length > 0 ? transactions : demoTransactions;
-  const budgetData = budgets && (budgets as any[]).length > 0 ? budgets : demoBudgets;
-  const goalData = goals && (goals as any[]).length > 0 ? goals : demoGoals;
+  const hasTxns = transactions && transactions.length > 0;
+  const txns = hasTxns ? transactions : demoTransactions;
+
+  const hasBudgets = budgets && (budgets as any[]).length > 0;
+  const budgetData = hasBudgets ? budgets : demoBudgets;
+
+  const hasGoals = goals && (goals as any[]).length > 0;
+  const goalData = hasGoals ? goals : demoGoals;
 
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,162 +122,275 @@ export default function PersonalFinance() {
         category: txnForm.category,
         type: txnForm.type,
       });
-      toast.success("Transaction added");
-      setShowAddTxn(false);
+      toast({ title: "Transaction added", description: "Your transaction has been recorded." });
+      setIsOpen(false);
       setTxnForm({ description: "", amount: "", category: "food", type: "expense" });
     } catch {
-      toast.error("Failed to add transaction");
+      toast({ title: "Error", description: "Failed to add transaction", variant: "destructive" });
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 animate-in fade-in duration-500 container mx-auto p-4 md:p-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Personal Finance</h1>
-          <p className="text-sm text-muted-foreground">Manage budgets, track expenses, and reach savings goals</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Personal Finance</h1>
+          <p className="text-muted-foreground mt-1">Manage budgets, track expenses, and reach savings goals.</p>
         </div>
-        <button
-          onClick={() => setShowAddTxn(!showAddTxn)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" /> Add Transaction
-        </button>
-      </div>
 
-      {/* Add Transaction Form */}
-      {showAddTxn && (
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="mb-4 text-sm font-semibold text-card-foreground">New Transaction</h3>
-          <form onSubmit={handleAddTransaction} className="grid gap-4 sm:grid-cols-4">
-            <input value={txnForm.description} onChange={(e) => setTxnForm({ ...txnForm, description: e.target.value })} placeholder="Description" required className="h-9 rounded-lg border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring" />
-            <input type="number" value={txnForm.amount} onChange={(e) => setTxnForm({ ...txnForm, amount: e.target.value })} placeholder="Amount" required step="0.01" className="h-9 rounded-lg border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring" />
-            <select value={txnForm.category} onChange={(e) => setTxnForm({ ...txnForm, category: e.target.value })} className="h-9 rounded-lg border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              {Object.keys(CATEGORY_COLORS).map((cat) => <option key={cat} value={cat}>{cat}</option>)}
-            </select>
-            <div className="flex gap-2">
-              <select value={txnForm.type} onChange={(e) => setTxnForm({ ...txnForm, type: e.target.value })} className="h-9 flex-1 rounded-lg border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="expense">Expense</option>
-                <option value="income">Income</option>
-              </select>
-              <button type="submit" className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground">Save</button>
-            </div>
-          </form>
-        </div>
-      )}
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Add Transaction
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add Transaction</DialogTitle>
+              <DialogDescription>
+                Record a new income or expense.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleAddTransaction} className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Desc
+                </Label>
+                <Input
+                  id="description"
+                  value={txnForm.description}
+                  onChange={(e) => setTxnForm({ ...txnForm, description: e.target.value })}
+                  className="col-span-3"
+                  placeholder="Grocery Store"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="amount" className="text-right">
+                  Amount
+                </Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  value={txnForm.amount}
+                  onChange={(e) => setTxnForm({ ...txnForm, amount: e.target.value })}
+                  className="col-span-3"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="type" className="text-right">
+                  Type
+                </Label>
+                <Select
+                  value={txnForm.type}
+                  onValueChange={(val) => setTxnForm({ ...txnForm, type: val })}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="expense">Expense</SelectItem>
+                    <SelectItem value="income">Income</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="category" className="text-right">
+                  Category
+                </Label>
+                <Select
+                  value={txnForm.category}
+                  onValueChange={(val) => setTxnForm({ ...txnForm, category: val })}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(CATEGORY_COLORS).map((cat) => (
+                      <SelectItem key={cat} value={cat} className="capitalize">{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <DialogFooter>
+                <Button type="submit">Save Transaction</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {/* Budgets + Category Breakdown */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="col-span-2 rounded-xl border border-border bg-card p-5">
-          <h3 className="mb-4 text-sm font-semibold text-card-foreground">Budgets</h3>
-          <div className="space-y-4">
-            {(budgetData as any[]).map((b: any) => {
-              const pct = Math.min((b.spent / b.amountLimit) * 100, 100);
-              const isOver = b.spent > b.amountLimit;
-              return (
-                <div key={b.id}>
-                  <div className="mb-1 flex items-center justify-between text-sm">
-                    <span className="font-medium text-card-foreground capitalize">{b.category}</span>
-                    <span className={isOver ? "text-red-500" : "text-muted-foreground"}>
-                      {formatCurrency(b.spent)} / {formatCurrency(b.amountLimit)}
-                    </span>
+        <Card className="col-span-2 shadow-md">
+          <CardHeader>
+            <CardTitle>Budgets</CardTitle>
+            <CardDescription>
+              {!hasBudgets && <span className="text-amber-500 font-semibold mr-2">[Demo Data]</span>}
+              Track your spending limits.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {isBudgetLoading ? (
+              [1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)
+            ) : (
+              (budgetData as any[]).map((b: any) => {
+                const pct = Math.min((b.spent / b.amountLimit) * 100, 100);
+                const isOver = b.spent > b.amountLimit;
+                return (
+                  <div key={b.id}>
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <span className="font-medium capitalize flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full" style={{ background: CATEGORY_COLORS[b.category.toLowerCase()] || "#ccc" }} />
+                        {b.category}
+                      </span>
+                      <span className={isOver ? "text-red-500 font-bold" : "text-muted-foreground"}>
+                        {formatCurrency(b.spent)} <span className="text-xs text-muted-foreground">of</span> {formatCurrency(b.amountLimit)}
+                      </span>
+                    </div>
+                    <Progress value={pct} className={`h-2 ${isOver ? "bg-red-100 dark:bg-red-900/20" : ""}`} indicatorClassName={isOver ? "bg-red-500" : "bg-primary"} />
                   </div>
-                  <div className="h-2 rounded-full bg-muted">
-                    <div
-                      className={`h-2 rounded-full transition-all ${isOver ? "bg-red-500" : "bg-primary"}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
 
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="mb-4 text-sm font-semibold text-card-foreground">Spending by Category</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={demoCategories} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2} dataKey="value">
-                {demoCategories.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-              </Pie>
-              <Tooltip contentStyle={{ background: "hsl(0 0% 10%)", border: "1px solid hsl(0 0% 20%)", borderRadius: "8px", fontSize: "12px" }} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="mt-2 space-y-1">
-            {demoCategories.map((c) => (
-              <div key={c.name} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full" style={{ background: c.color }} />
-                  <span className="text-muted-foreground">{c.name}</span>
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle>Spending Breakdown</CardTitle>
+            <CardDescription>Expenses by category.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[200px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={demoCategories} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value" stroke="none">
+                    {demoCategories.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--popover))",
+                      borderColor: "hsl(var(--border))",
+                      borderRadius: "var(--radius)",
+                      color: "hsl(var(--popover-foreground))",
+                    }}
+                    itemStyle={{ color: "hsl(var(--foreground))" }}
+                    formatter={(value: any) => [`$${value}`, ""]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-4 space-y-2">
+              {demoCategories.slice(0, 4).map((c) => (
+                <div key={c.name} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2.5 w-2.5 rounded-full" style={{ background: c.color }} />
+                    <span className="text-muted-foreground">{c.name}</span>
+                  </div>
+                  <span className="font-medium">{formatCurrency(c.value)}</span>
                 </div>
-                <span className="font-medium text-card-foreground">{formatCurrency(c.value)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Savings Goals */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="mb-4 text-sm font-semibold text-card-foreground">Savings Goals</h3>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {(goalData as any[]).map((g: any) => {
-            const pct = Math.round((g.currentAmount / g.targetAmount) * 100);
-            return (
-              <div key={g.id} className="rounded-lg border border-border p-4">
-                <div className="mb-2 flex items-center gap-2">
-                  <Target className="h-4 w-4" style={{ color: g.color }} />
-                  <span className="text-sm font-semibold text-card-foreground">{g.name}</span>
-                </div>
-                <div className="mb-2 text-2xl font-bold text-card-foreground">
-                  {formatCurrency(g.currentAmount)}
-                </div>
-                <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-                  <span>{pct}%</span>
-                  <span>Goal: {formatCurrency(g.targetAmount)}</span>
-                </div>
-                <div className="h-2 rounded-full bg-muted">
-                  <div className="h-2 rounded-full" style={{ width: `${pct}%`, background: g.color }} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle>Savings Goals</CardTitle>
+          <CardDescription>
+            {!hasGoals && <span className="text-amber-500 font-semibold mr-2">[Demo Data]</span>}
+            Progress towards your financial targets.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {isGoalLoading ? (
+              [1, 2, 3].map(i => <Skeleton key={i} className="h-32 w-full" />)
+            ) : (
+              (goalData as any[]).map((g: any) => {
+                const pct = Math.round((g.currentAmount / g.targetAmount) * 100);
+                return (
+                  <div key={g.id} className="rounded-xl border border-border p-4 hover:border-primary/50 transition-colors">
+                    <div className="mb-4 flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                        <Target className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{g.name}</p>
+                        <p className="text-xs text-muted-foreground">Target: {formatCurrency(g.targetAmount)}</p>
+                      </div>
+                    </div>
+
+                    <div className="mb-2 flex justify-between items-end">
+                      <span className="text-2xl font-bold">{formatCurrency(g.currentAmount)}</span>
+                      <Badge variant="secondary">{pct}%</Badge>
+                    </div>
+
+                    <Progress value={pct} className="h-2" />
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Transaction List */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="mb-4 text-sm font-semibold text-card-foreground">All Transactions</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Date</th>
-                <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Description</th>
-                <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Category</th>
-                <th className="pb-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(txns as any[]).map((txn: any) => (
-                <tr key={txn.id} className="border-b border-border/50 last:border-0">
-                  <td className="py-3 text-sm text-muted-foreground">{new Date(txn.date).toLocaleDateString()}</td>
-                  <td className="py-3 text-sm font-medium text-card-foreground">{txn.description}</td>
-                  <td className="py-3">
-                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize" style={{ background: `${CATEGORY_COLORS[txn.category] || "#6b7280"}20`, color: CATEGORY_COLORS[txn.category] || "#6b7280" }}>
-                      {txn.category}
-                    </span>
-                  </td>
-                  <td className={`py-3 text-right text-sm font-semibold ${txn.amount >= 0 ? "text-green-500" : "text-red-500"}`}>
-                    {txn.amount >= 0 ? "+" : ""}{formatCurrency(txn.amount)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle>Recent Transactions</CardTitle>
+          <CardDescription>History of your income and expenses.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isTxLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(txns as any[]).map((txn: any) => (
+                  <TableRow key={txn.id}>
+                    <TableCell className="text-muted-foreground whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {new Date(txn.date).toLocaleDateString()}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{txn.description || txn.merchant}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize font-normal" style={{
+                        borderColor: `${CATEGORY_COLORS[txn.category] || "#6b7280"}40`,
+                        color: CATEGORY_COLORS[txn.category] || "#6b7280",
+                        backgroundColor: `${CATEGORY_COLORS[txn.category] || "#6b7280"}10`
+                      }}>
+                        {txn.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className={`text-right font-semibold ${txn.amount >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {txn.amount >= 0 ? "+" : ""}{formatCurrency(txn.amount)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

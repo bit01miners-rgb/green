@@ -6,3 +6,6 @@ dist
 .DS_Store
 
 a.txt
+
+scripts/check-supabase-status.cjs
+scripts/auto-setup-supabase.cjs

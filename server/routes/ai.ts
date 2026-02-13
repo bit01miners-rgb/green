@@ -181,4 +181,16 @@ router.get("/market-signals", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/ai/sentiment
+router.get("/sentiment", async (req: Request, res: Response) => {
+  try {
+    const { analyzeMarketSentiment } = await import("../services/ai/sentiment");
+    const sentiment = await analyzeMarketSentiment();
+    res.json(sentiment);
+  } catch (error) {
+    console.error("Get sentiment error:", error);
+    res.status(500).json({ error: "Failed to analyze sentiment" });
+  }
+});
+
 export default router;

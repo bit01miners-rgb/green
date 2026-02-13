@@ -13,23 +13,25 @@ export interface CoinData {
 }
 
 export interface CoinChart {
-  prices: [number, number][];
-  market_caps: [number, number][];
-  total_volumes: [number, number][];
+  prices: { timestamp: number; date: string; price: number }[];
+  marketCaps: { timestamp: number; date: string; marketCap: number }[];
+  volumes: { timestamp: number; date: string; volume: number }[];
 }
 
 export function useTopCoins(limit = 20) {
-  return useQuery<CoinData[]>({
+  return useQuery<any, Error, CoinData[]>({
     queryKey: ["/api/trading/market/overview", limit],
     staleTime: 60 * 1000,
+    select: (data) => data.topCoins,
   });
 }
 
 export function useCoinChart(coinId: string, days = 7) {
-  return useQuery<CoinChart>({
+  return useQuery<any, Error, CoinChart>({
     queryKey: [`/api/trading/market/${coinId}?days=${days}`],
     enabled: !!coinId,
     staleTime: 60 * 1000,
+    select: (data) => data.chart,
   });
 }
 
