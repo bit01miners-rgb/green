@@ -36,6 +36,9 @@
     "@radix-ui/react-tabs": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.0",
     "@radix-ui/react-tooltip": "^1.1.0",
+    "@reown/appkit": "^1.8.18",
+    "@reown/appkit-adapter-solana": "^1.8.18",
+    "@reown/appkit-adapter-wagmi": "^1.8.18",
     "@solana/web3.js": "^1.95.0",
     "@supabase/supabase-js": "^2.45.0",
     "@tanstack/react-query": "^5.51.0",
@@ -70,6 +73,8 @@
     "technicalindicators": "^3.1.0",
     "unzipper": "^0.12.3",
     "vaul": "^0.9.0",
+    "viem": "^2.45.3",
+    "wagmi": "^3.4.3",
     "wouter": "^3.8.0",
     "zod": "^3.23.0"
   },
